@@ -7,7 +7,7 @@
 }
 
 #ui {
-  font-family: "Coming Soon", cursive;
+  font-family: "Carter One", cursive;
   padding-top: 1em;
   color: white;
   text-align: center;
@@ -19,12 +19,19 @@ img {
   height: 100%;
   position: absolute;
   z-index: -10;
+
+  user-select: none;
+  -moz-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
 }
 
 :root {
-  cursor: none;
+  cursor: var(--cursorVisibility);
   --cursorX: 30vw;
   --cursorY: 30vh;
+  --cursorVisibility: grab;
 }
 
 :root:before {
@@ -34,6 +41,15 @@ img {
   height: 100%;
   position: fixed;
   pointer-events: none;
+  background: radial-gradient(
+    circle 10vmax at var(--cursorX) var(--cursorY),
+    rgba(0, 0, 0, 0),
+    rgba(0, 0, 0, 1)
+  );
+  z-index: -8;
+}
+
+.highlight {
   background: radial-gradient(
     circle 10vmax at var(--cursorX) var(--cursorY),
     rgba(0, 0, 0, 0),

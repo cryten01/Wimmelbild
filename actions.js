@@ -1,22 +1,41 @@
 let drag = false;
 let animals = [];
-let currentAnimalIndex = 0;
+let currentAnimalIndex;
+let gameHasLoaded = false;
+
+/**
+ * Game state functions
+ */
 
 function startGame() {
-  fetchAnimals();
+  if (!gameHasLoaded) {
+    fetchAnimals();
 
-  document.addEventListener("mousedown", onMouseDown);
-  document.addEventListener("mousemove", onMouseMove);
-  document.addEventListener("mouseup", onMouseUp);
+    document.addEventListener("mousedown", onMouseDown);
+    document.addEventListener("mousemove", onMouseMove);
+    document.addEventListener("mouseup", onMouseUp);
+
+    gameHasLoaded = true;
+  }
+
+  currentAnimalIndex = 0;
+  setFlashlight(true);
+
+  document.getElementById("gamebutton").style.display = "none";
+  document.getElementById("statustext").style.display = "block";
+
+  updateStatusText("Welcome explorer!");
+
+  startRound(0);
 }
 
-function fetchAnimals() {
-  fetch("animals.json")
-    .then((response) => response.json())
-    .then((data) => (animals = data));
+function startRound(round) {
+  setTimeout(() => {
+    updateStatusText("Can you spot the " + animals[round].name + "?");
+  }, 3000);
 }
 
-function checkIfAnimalWasFound(flashLightX, flashlightY) {
+function checkRound(flashLightX, flashlightY) {
   // For easy collider point creation and debugging
   console.log("x:" + flashLightX + " / y: " + flashlightY);
 
@@ -27,15 +46,42 @@ function checkIfAnimalWasFound(flashLightX, flashlightY) {
     const col = colliders[i];
 
     if (checkDistanceToCollider(flashLightX, flashlightY, col)) {
-      // For debugging only
-      console.log("Found animal");
-
+      updateStatusText("You are doing great!");
       // TODO: Highlight entire animal
 
-      // Return as no distance check is needed any more
-      return;
+      // No distance check is needed any more
+      return true;
     }
   }
+
+  updateStatusText("Almost let's try it again!");
+
+  return false;
+}
+
+function endGame() {
+  setTimeout(() => {
+    updateStatusText("Great you found all animals!");
+    setTimeout(() => {
+      document.getElementById("statustext").style.display = "none";
+      document.getElementById("gamebutton").style.display = "block";
+      document.getElementById("gamebutton").textContent = "Restart Game!";
+    }, 2000);
+  }, 3000);
+}
+
+/**
+ * Helper functions
+ */
+
+function fetchAnimals() {
+  fetch("animals.json")
+    .then((response) => response.json())
+    .then((data) => (animals = data));
+}
+
+function updateStatusText(text) {
+  document.getElementById("statustext").textContent = text;
 }
 
 function checkDistanceToCollider(flashLightX, flashLightY, collisionPoint) {
@@ -50,6 +96,13 @@ function highlightArea(collisionPoint) {
   // TODO
 }
 
+function setFlashlight(on) {
+  // TODO
+}
+
+/**
+ * Input functions
+ */
 function onMouseDown() {
   document.documentElement.style.setProperty("--cursorVisibility", "none");
   drag = true;
@@ -67,12 +120,16 @@ function onMouseMove(e) {
 }
 
 function onMouseUp(e) {
-  checkIfAnimalWasFound(e.clientX, e.clientY);
-
   document.documentElement.style.setProperty("--cursorVisibility", "grab");
   drag = false;
 
-  // TODO: move to next animal if it was found
-}
+  if (checkRound(e.clientX, e.clientY)) {
+    currentAnimalIndex++;
+  }
 
-startGame();
+  if (currentAnimalIndex < animals.length) {
+    startRound(currentAnimalIndex);
+  } else {
+    endGame();
+  }
+}

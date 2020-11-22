@@ -13,5 +13,15 @@
         "margin": 30
       }
     ]
+  },
+  {
+    "name": "Lion",
+    "colliders": [
+      {
+        "x": 930,
+        "y": 588,
+        "margin": 30
+      }
+    ]
   }
 ]

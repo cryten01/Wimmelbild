@@ -11,18 +11,21 @@
       rel="stylesheet"
     />
   </head>
-  <body id="game">
-    <img src="assets/imgs/Wimmelbild.jpg" />
-
-    <div id="ui">
-      <h1 id="statustext">Status text</h1>
+  <body>
+    <div id="ui-container">
+      <h1 id="statustext">Click on the start button!</h1>
+    </div>
+    <div id="viewport-container">
+      <img src="assets/imgs/Wimmelbild.jpg" alt="Wimmelbild" />
+      <div id="flashlight__overlay"></div>
+      <div id="button__overlay">
+        <button type="button" id="gamebutton" onclick="onStartGameBtnPressed()">
+          Start!
+        </button>
+      </div>
     </div>
 
-    <div id="btnwrapper">
-      <button type="button" id="gamebutton" onclick="startGame()">
-        Start game!
-      </button>
-    </div>
     <script type="text/javascript" src="actions.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
   </body>
 </html>

@@ -1,32 +1,53 @@
-let drag = false;
+let flashlight;
 let animals = [];
 let currentAnimalIndex;
+let drag = false;
 let gameHasLoaded = false;
+let heightOrigin;
+let widthOrigin;
+let scaleX;
+let scaleY;
+let containerPosTopLeft;
+let creatorMode = false;
+
+window.onload = function () {
+  window.addEventListener("resize", onWindowResize);
+
+  // Do all one time operations here!
+  if (!gameHasLoaded) {
+    fetchAnimals();
+    flashlight = document.getElementById("flashlight__overlay");
+    gameHasLoaded = true;
+  }
+
+  // Register input listeners
+  document.addEventListener("mousedown", onMouseDown);
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+
+  flashlight.style.setProperty("--cursorX", $(flashlight).width() / 2 + "px");
+  flashlight.style.setProperty("--cursorY", $(flashlight).height() / 2 + "px");
+
+  containerPosTopLeft = $(flashlight).parent().position();
+  getOriginalImgSize("./assets/imgs/Wimmelbild.jpg");
+};
 
 /**
  * Game state functions
  */
-
-function startGame() {
-  if (!gameHasLoaded) {
-    fetchAnimals();
-
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("mousemove", onMouseMove);
-    document.addEventListener("mouseup", onMouseUp);
-
-    gameHasLoaded = true;
-  }
-
+function onStartGameBtnPressed() {
+  // Start from the first animal
   currentAnimalIndex = 0;
-  setFlashlight(true);
 
-  document.getElementById("gamebutton").style.display = "none";
-  document.getElementById("statustext").style.display = "block";
+  $("#statustext").show();
+  $("#button__overlay").hide();
 
+  // TODO: animate flashlight
+
+  // Update our status text in the UI
   updateStatusText("Welcome explorer!");
-
-  startRound(0);
+  // Start the first round with index 0
+  startRound(currentAnimalIndex);
 }
 
 function startRound(round) {
@@ -35,17 +56,14 @@ function startRound(round) {
   }, 3000);
 }
 
-function checkRound(flashLightX, flashlightY) {
-  // For easy collider point creation and debugging
-  console.log("x:" + flashLightX + " / y: " + flashlightY);
+function checkRound(coords) {
+  // Check if flashlight is within range of at least one collider point
+  const colliderPoints = animals[currentAnimalIndex].colliders;
 
-  // Check if flashlight is within range of one collider
-  const colliders = animals[currentAnimalIndex].colliders;
+  for (let i = 0; i < colliderPoints.length; i++) {
+    const point = colliderPoints[i];
 
-  for (let i = 0; i < colliders.length; i++) {
-    const col = colliders[i];
-
-    if (checkDistanceToCollider(flashLightX, flashlightY, col)) {
+    if (checkDistanceToCollider(coords.x, coords.y, point)) {
       updateStatusText("You are doing great!");
       // TODO: Highlight entire animal
 
@@ -62,12 +80,13 @@ function checkRound(flashLightX, flashlightY) {
 function endGame() {
   setTimeout(() => {
     updateStatusText("Great you found all animals!");
+
     setTimeout(() => {
-      document.getElementById("statustext").style.display = "none";
-      document.getElementById("gamebutton").style.display = "block";
+      $("#statustext").hide();
+      $("#button__overlay").show();
       document.getElementById("gamebutton").textContent = "Restart Game!";
     }, 2000);
-  }, 3000);
+  }, 2000);
 }
 
 /**
@@ -84,27 +103,72 @@ function updateStatusText(text) {
   document.getElementById("statustext").textContent = text;
 }
 
-function checkDistanceToCollider(flashLightX, flashLightY, collisionPoint) {
-  let a = flashLightX - collisionPoint.x;
-  let b = flashLightY - collisionPoint.y;
+function checkDistanceToCollider(x, y, collisionPoint) {
+  // Flashlight coordinates must be scaled for correct comaprison at 100% img size
+  let a = x - collisionPoint.x;
+  let b = y - collisionPoint.y;
+  // Calculatep distance with pythagorean theorem
   let distance = Math.sqrt(a * a + b * b);
-
-  return distance <= collisionPoint.margin;
+  // For debugging only
+  console.log(
+    "Col X: " +
+      collisionPoint.x +
+      " / Col Y: " +
+      collisionPoint.y +
+      " / Distance: " +
+      distance +
+      " / Margin " +
+      collisionPoint.margin / scaleX
+  );
+  return distance <= collisionPoint.margin / scaleX;
 }
 
 function highlightArea(collisionPoint) {
   // TODO
 }
 
-function setFlashlight(on) {
-  // TODO
+function getOriginalImgSize(imgSrc) {
+  let newImg = new Image();
+
+  newImg.onload = function () {
+    heightOrigin = newImg.height;
+    widthOrigin = newImg.width;
+    console.log("Original img size x: " + widthOrigin + " /y: " + heightOrigin);
+
+    // First time scale calculation
+    calcScaleFactor(
+      $(flashlight).width(),
+      $(flashlight).height(),
+      widthOrigin,
+      heightOrigin
+    );
+  };
+
+  newImg.src = imgSrc; // this must be done AFTER setting onload
+}
+
+function calcScaleFactor(x, y, xOrigin, yOrigin) {
+  // Calculate new xy scale factor for collider points
+  scaleX = x / xOrigin;
+  scaleY = y / yOrigin;
+  // For debugging only!
+  console.log("Scale factor X: " + scaleX + " / Y: " + scaleY);
+}
+
+function onWindowResize() {
+  calcScaleFactor(
+    $(flashlight).width(),
+    $(flashlight).height(),
+    widthOrigin,
+    heightOrigin
+  );
 }
 
 /**
  * Input functions
  */
 function onMouseDown() {
-  document.documentElement.style.setProperty("--cursorVisibility", "none");
+  flashlight.style.setProperty("--cursorVisibility", "none");
   drag = true;
 }
 
@@ -114,16 +178,45 @@ function onMouseMove(e) {
     let y = e.clientY;
 
     // Only working when y modification is also active!
-    document.documentElement.style.setProperty("--cursorX", x + "px");
-    document.documentElement.style.setProperty("--cursorY", y + "px");
+    // As relative offset is needed we need to get the parents top/left coordinates
+    flashlight.style.setProperty(
+      "--cursorX",
+      x - containerPosTopLeft.left + "px"
+    );
+
+    flashlight.style.setProperty(
+      "--cursorY",
+      y - containerPosTopLeft.top + "px"
+    );
   }
 }
 
+/**
+ * Always use this function to get relative coordinates from the viewport container!
+ * We need the relative position inside the image container multiplied by the scale factor
+ * in order to get the correct img coordinates at 100% img size.
+ * @param {*} x the current mouse x value
+ * @param {*} y the current mouse y value
+ */
+function getViewportCoords(x, y) {
+  let coords = {
+    x: (x - containerPosTopLeft.left) / scaleX,
+    y: (y - containerPosTopLeft.top) / scaleY,
+  };
+
+  // For easy collider point creation and debugging
+  console.log("Inside viewport x: " + coords.x + " / y: " + coords.y);
+
+  return coords;
+}
+
 function onMouseUp(e) {
-  document.documentElement.style.setProperty("--cursorVisibility", "grab");
+  flashlight.style.setProperty("--cursorVisibility", "grab");
   drag = false;
 
-  if (checkRound(e.clientX, e.clientY)) {
+  let coords = getViewportCoords(e.clientX, e.clientY);
+
+  if (checkRound(coords)) {
     currentAnimalIndex++;
   }
 

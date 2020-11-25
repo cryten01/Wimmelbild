@@ -1,36 +1,38 @@
 let flashlight;
+let statusText;
 let animals = [];
-let currentAnimalIndex;
+let currentAnimalIndex; // used for current round
 let drag = false;
-let heightOrigin;
-let widthOrigin;
+let containerPosTopLeft;
+let imgX;
+let imgY;
 let scaleX;
 let scaleY;
-let containerPosTopLeft;
-let creatorMode = false;
 
 window.onload = function () {
-  // Do all one time operations here!p
+  // Do all one time operations here!
+  fetchAnimals();
+
   window.addEventListener("resize", onWindowResize);
   document.addEventListener("mousedown", onMouseDown);
   document.addEventListener("mousemove", onMouseMove);
   document.addEventListener("mouseup", onMouseUp);
 
-  fetchAnimals();
+  statusText = document.getElementById("statustext");
   flashlight = document.getElementById("flashlight__overlay");
   containerPosTopLeft = $(flashlight).parent().position();
 
   getOriginalImgSize("./assets/imgs/Wimmelbild.jpg");
 };
 
-/**
- * Game state functions
- */
+/////////////////////////
+// Game state functions
+/////////////////////////
+
 function startGame() {
   // Reset flashlight position
   flashlight.style.setProperty("--cursorX", $(flashlight).width() / 2 + "px");
   flashlight.style.setProperty("--cursorY", $(flashlight).height() / 2 + "px");
-  // TODO: initial flashlight animation
 
   // Update UI state
   $("#statustext").show();
@@ -39,14 +41,28 @@ function startGame() {
 
   // Reset index for receiving attributes from the first animal later
   currentAnimalIndex = 0;
+
   // Start the first round with index 0
   startRound(currentAnimalIndex);
 }
 
 function startRound(round) {
   setTimeout(() => {
-    updateStatusText("Can you spot the " + animals[round].name + "?");
-  }, 3000);
+    // For debugging only
+    console.log(
+      "Start next round: animal:" + currentAnimalIndex + " / round:" + round
+    );
+
+    updateStatusText(
+      round +
+        1 +
+        "/" +
+        animals.length +
+        " - Can you spot the " +
+        animals[round].name +
+        "?"
+    );
+  }, 2000);
 }
 
 function endGame() {
@@ -61,9 +77,9 @@ function endGame() {
   }, 2000);
 }
 
-/**
- * Helper functions
- */
+/////////////////////////
+// Helper functions
+/////////////////////////
 
 function fetchAnimals() {
   fetch("animals.json")
@@ -72,54 +88,46 @@ function fetchAnimals() {
 }
 
 function updateStatusText(text) {
-  document.getElementById("statustext").textContent = text;
-}
-
-function highlightArea(collisionPoint) {
-  // TODO
+  statusText.textContent = text;
 }
 
 function getOriginalImgSize(imgSrc) {
   let newImg = new Image();
 
   newImg.onload = function () {
-    heightOrigin = newImg.height;
-    widthOrigin = newImg.width;
-    console.log("Original img size x: " + widthOrigin + " /y: " + heightOrigin);
+    imgY = newImg.height;
+    imgX = newImg.width;
+
+    // For debugging only
+    console.log("Original img size x:" + imgX + " y:" + imgY);
 
     // First time scale calculation
-    calcScaleFactor(
-      $(flashlight).width(),
-      $(flashlight).height(),
-      widthOrigin,
-      heightOrigin
-    );
+    calcScaleFactor($(flashlight).width(), $(flashlight).height(), imgX, imgY);
   };
 
   newImg.src = imgSrc; // this must be done AFTER setting onload
 }
 
 function calcScaleFactor(x, y, xOrigin, yOrigin) {
-  // Calculate new xy scale factor for collider points
   scaleX = x / xOrigin;
   scaleY = y / yOrigin;
+
   // For debugging only!
-  console.log("Scale factor X: " + scaleX + " / Y: " + scaleY);
+  console.log("Scale factor x:" + scaleX + " y: " + scaleY);
 }
 
 /**
  * Always use this function to get the relative image coordinates at 100% img size!
+ * Calculate the relative position inside the image container multiplied by the scale factor
  */
 function getImgCoords(x, y) {
-  // Calculate the relative position inside the image container multiplied by the scale factor
-  // in order to get the correct img coordinates at 100% img size.
   let coords = {
     x: (x - containerPosTopLeft.left) / scaleX,
     y: (y - containerPosTopLeft.top) / scaleY,
   };
 
-  // For easy collider point creation and debugging
-  console.log("Inside viewport x: " + coords.x + " / y: " + coords.y);
+  // For debugging and easy collider point creation
+  console.log("Inside viewport / x: " + coords.x + "p y: " + coords.y);
 
   return coords;
 }
@@ -155,22 +163,22 @@ function checkDistanceToColliderPoint(lightCoordsScaled, collisionPoint) {
 
   // For debugging only
   console.log(
-    "Col X: " +
+    "ColPoint x:" +
       collisionPoint.x +
-      " / Col Y: " +
+      " y:" +
       collisionPoint.y +
       " / Distance: " +
       distance +
-      " / Margin " +
+      " / Margin: " +
       collisionPoint.margin
   );
 
   return distance <= collisionPoint.margin;
 }
 
-/**
- * Input functions
- */
+/////////////////////
+// Input functions
+//////////////////////
 
 function onMouseDown() {
   flashlight.style.setProperty("--cursorVisibility", "none");
@@ -210,8 +218,6 @@ function onMouseUp(e) {
   const isColliding = checkForCollision(coords);
 
   if (isColliding) {
-    // TODO: Highlight entire animal
-
     updateStatusText("You are doing great!");
     currentAnimalIndex++;
   } else {
@@ -231,10 +237,5 @@ function onStartGameBtnPressed() {
 }
 
 function onWindowResize() {
-  calcScaleFactor(
-    $(flashlight).width(),
-    $(flashlight).height(),
-    widthOrigin,
-    heightOrigin
-  );
+  calcScaleFactor($(flashlight).width(), $(flashlight).height(), imgX, imgY);
 }
